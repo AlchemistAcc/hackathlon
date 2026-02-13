@@ -28,8 +28,8 @@ git --version
 
 Then clone this repo:
 ```bash
-git clone https://github.com/AlchemistAcc/hackathlon.git
-cd hackathlon
+git clone https://github.com/AlchemistAcc/hackathon.git
+cd hackathon
 ```
 
 ### Windows Warriors
@@ -120,7 +120,7 @@ ANTHROPIC_API_KEY=your_actual_key_here
 ## Phase 3: Enter the Container
 
 1. Open VS Code
-2. Open the cloned `hackathlon` folder
+2. Open the cloned `hackathon` folder
 3. When VS Code pops up a notification asking **"Reopen in Container?"** — click that button!
    - Or press `F1` → type "Dev Containers: Reopen in Container"
 4. Wait for the magic to happen (first build takes a few minutes — grab a snack)
