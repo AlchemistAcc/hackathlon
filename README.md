@@ -103,7 +103,7 @@ ANTHROPIC_API_KEY=your_actual_key_here
 
 ### Step 3: To GLM or Not to GLM?
 
-**Option A: Use the GLM Coding Plan** (Recommended for Hackathon)
+**Option A: Use the GLM Coding Plan**
 - Fill in `ANTHROPIC_API_KEY` with your actual key
 - The setup script will auto-configure everything for you
 - Faster, more magical experience
