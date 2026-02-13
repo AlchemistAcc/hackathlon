@@ -7,5 +7,9 @@
   },
   "enabledPlugins": {
     "playwright@claude-plugins-official": true
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }
