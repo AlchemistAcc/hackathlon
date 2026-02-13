@@ -1,4 +1,4 @@
-# Welcome to the Alchemist AI Hackathon!
+# Welcome to the Alchemist AI Hackathlon!
 
 Grab your caffeine, put on your thinking cap, and prepare to have your mind mildly-to-moderately blown by the power of AI-assisted development. This repo is your portal to a pre-configured, ready-to-code environment designed to let you focus on *building* instead of *configuring for 47 hours straight*.
 
