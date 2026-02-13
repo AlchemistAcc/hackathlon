@@ -1,0 +1,7 @@
+# Claude Code - Local overrides (team settings should be in .claude/settings.json)
+.claude/settings.local.json
+.claude/hooks.local.json
+.claude/*.local.*
+
+# DevContainer - Environment variables with API keys
+.devcontainer/.env

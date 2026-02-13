@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(glm-plan-usage:usage-query-skill)",
+      "Bash(uv:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": true
+  }
+}

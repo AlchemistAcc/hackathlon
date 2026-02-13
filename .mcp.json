@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "PLAYWRIGHT_CHROMIUM_SANDBOX=false npx @playwright/mcp@latest"
+      ]
+    }
+  }
+}
