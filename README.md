@@ -28,7 +28,7 @@ git --version
 
 Then clone this repo:
 ```bash
-git clone <this-repo-url>
+git clone https://github.com/AlchemistAcc/hackathlon.git
 cd hackathlon
 ```
 
