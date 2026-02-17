@@ -20,11 +20,6 @@ echo ""
 echo "------------------------------------------"
 echo "Step 1: Installing Python 3.14..."
 echo "------------------------------------------"
-# Install expect if not already installed
-if ! command -v expect &> /dev/null; then
-    echo "Installing expect for interactive automation..."
-    apt-get update &>/dev/null && apt-get install -y expect &>/dev/null
-fi
 
 uv python install 3.14
 
@@ -60,47 +55,22 @@ python -c "import flask; import streamlit; import numpy; import pandas; print('C
 
 echo ""
 echo "------------------------------------------"
-echo "Step 2.5: Setting up Playwright browser support..."
+echo "Step 3: Setting up Playwright browser support (JavaScript)..."
 echo "------------------------------------------"
-# Create symlink for Chrome so Playwright can find it
-# Playwright looks for Chrome at /opt/google/chrome/chrome by default
-# This container has Chrome installed at /opt/chrome/chrome
-if [ -f "/opt/chrome/chrome" ]; then
-    # Create/overwrite wrapper script that adds --no-sandbox flag (required for containerized Chrome)
-    echo "Creating Chrome wrapper script with --no-sandbox..."
-    sudo tee /opt/chrome/chrome-wrapper > /dev/null << 'WRAPPER_EOF'
-#!/bin/bash
-/opt/chrome/chrome --no-sandbox "$@"
-WRAPPER_EOF
-    sudo chmod +x /opt/chrome/chrome-wrapper
-    echo "  ✓ Chrome wrapper created"
+# Install Playwright via npm (JavaScript version)
+echo "Installing Playwright via npm..."
+npx --yes @playwright/mcp@latest -V
+echo "  ✓ Playwright npm package installed"
 
-    # Create symlink from Playwright's expected path to the wrapper
-    if [ ! -L "/opt/google/chrome/chrome" ]; then
-        echo "Creating symlink for Playwright to use Chrome..."
-        sudo mkdir -p /opt/google/chrome
-        sudo ln -sf /opt/chrome/chrome-wrapper /opt/google/chrome/chrome
-        echo "  ✓ Chrome symlink created at /opt/google/chrome/chrome"
-    else
-        echo "  ✓ Chrome symlink already exists"
-    fi
-else
-    echo "  ⚠ Warning: Chrome not found at /opt/chrome/chrome"
-fi
-
-# Install emoji fonts for proper icon rendering in browsers
-if ! dpkg -l | grep -q "fonts-noto-color-emoji"; then
-    echo "Installing emoji fonts..."
-    sudo apt update > /dev/null 2>&1
-    sudo apt install -y fonts-noto-color-emoji > /dev/null 2>&1
-    echo "  ✓ Emoji fonts installed"
-else
-    echo "  ✓ Emoji fonts already installed"
-fi
+# Install Playwright browsers (Chromium) - this automatically installs the correct
+# architecture for the container (works on both x86_64 and ARM64/M4 Macs)
+echo "Installing Playwright Chromium browser..."
+npx -p @playwright/mcp@latest playwright install --with-deps chromium
+echo "  ✓ Playwright Chromium installed"
 
 echo ""
 echo "------------------------------------------"
-echo "Step 3: Setup GLM Coding Plan..."
+echo "Step 4: Setup GLM Coding Plan..."
 echo "------------------------------------------"
 
 # Authenticate with GLM coding plan if API key is provided
@@ -109,8 +79,12 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
     npx --yes @z_ai/coding-helper auth glm_coding_plan_global "$ANTHROPIC_API_KEY"
 fi
 
-# Use expect to automate the interactive claude-code setup
-sudo apt update && sudo apt install expect -y 
+# Install expect if not already installed
+if ! command -v expect &> /dev/null; then
+    echo "Installing expect for interactive automation..."
+    apt-get update &>/dev/null && apt-get install -y expect &>/dev/null
+fi
+
 # Only proceed if expect is available and ANTHROPIC_API_KEY is set
 if ! command -v expect &> /dev/null; then
     echo "  ⚠ 'expect' not installed, skipping interactive setup"
@@ -166,7 +140,7 @@ EXPECT_EOF
     echo ""
     echo "  Installing glm-plan-usage plugin..."
     expect << 'PLUGIN_EOF'
-set timeout 60
+set timeout 20
 
 spawn npx --yes @z_ai/coding-helper enter claude-code
 
@@ -177,7 +151,11 @@ expect {
 }
 # Navigate to Plugin Marketplace (2 down arrows)
 send "\033\[B"
+sleep 1
 send "\033\[B"
+sleep 1
+send "\033\[B"
+sleep 1
 send "\r"
 
 # Wait for Plugin Marketplace menu
@@ -206,23 +184,8 @@ fi
 echo ""
 
 echo ""
-echo "=========================================="
-echo "Setup complete!"
-echo "=========================================="
-echo ""
-echo "Python 3.14 is now the default in the active venv."
-echo "Claude Code environment variables configured."
-echo ""
-echo "MCP Servers configured via environment variables:"
-if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-    echo "  ✓ GitHub MCP Server"
-else
-    echo "  ○ GitHub MCP Server (set GITHUB_PERSONAL_ACCESS_TOKEN in .env)"
-fi
-
-echo ""
 echo "------------------------------------------"
-echo "Step 6: Modifying Claude Code settings..."
+echo "Step 5: Modifying Claude Code settings..."
 echo "------------------------------------------"
 
 # Configure .vscode/settings.json for VSCode plugin
@@ -416,4 +379,18 @@ else
     echo "  ⚠ Claude Code settings.json not found, skipping"
 fi
 
+echo ""
+echo "=========================================="
+echo "Setup complete!"
+echo "=========================================="
+echo ""
+echo "Python 3.14 is now the default in the active venv."
+echo "Claude Code environment variables configured."
+echo ""
+echo "MCP Servers configured "
+if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
+    echo "  ✓ GitHub MCP Server"
+else
+    echo "  ○ GitHub MCP Server (set GITHUB_PERSONAL_ACCESS_TOKEN in .env)"
+fi
 

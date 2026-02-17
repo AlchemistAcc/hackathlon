@@ -1,11 +1,16 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "bash",
+      "command": "npx",
       "args": [
-        "-c",
-        "PLAYWRIGHT_CHROMIUM_SANDBOX=false npx @playwright/mcp@latest"
-      ]
+        "@playwright/mcp@latest",
+        "--browser",
+        "chromium"
+      ],
+      "env": {
+        "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright",
+        "PLAYWRIGHT_CHROMIUM_SANDBOX": "false"
+      }
     }
   }
 }
