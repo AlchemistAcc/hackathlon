@@ -82,7 +82,7 @@ fi
 # Install expect if not already installed
 if ! command -v expect &> /dev/null; then
     echo "Installing expect for interactive automation..."
-    apt-get update &>/dev/null && apt-get install -y expect &>/dev/null
+    sudo apt update && sudo apt install expect -y 
 fi
 
 # Only proceed if expect is available and ANTHROPIC_API_KEY is set
