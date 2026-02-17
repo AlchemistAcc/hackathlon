@@ -161,6 +161,47 @@ EXPECT_EOF
     else
         echo "  ⚠ Warning: Claude Code setup may have been incomplete"
     fi
+
+    # Install glm-plan-usage plugin via Plugin Marketplace
+    echo ""
+    echo "  Installing glm-plan-usage plugin..."
+    expect << 'PLUGIN_EOF'
+set timeout 60
+
+spawn npx --yes @z_ai/coding-helper enter claude-code
+
+# Wait for main menu
+expect {
+    "Apply Configuration" {}
+    "Configuration Refresh" {}
+}
+# Navigate to Plugin Marketplace (2 down arrows)
+send "\033\[B"
+send "\033\[B"
+send "\r"
+
+# Wait for Plugin Marketplace menu
+expect "Plugin Marketplace"
+# Select the first plugin (glm-plan-usage) and install
+send "\r"
+
+# Wait for installation to complete or plugin details
+expect {
+    "Installation" { send "\r" }
+    "glm-plan-usage" { send "\r" }
+    timeout { }
+}
+
+# Exit with Ctrl+C
+send "\003"
+expect eof
+wait
+PLUGIN_EOF
+    if [ $? -eq 0 ]; then
+        echo "  ✓ glm-plan-usage plugin installed"
+    else
+        echo "  ⚠ Warning: Plugin installation may have been incomplete"
+    fi
 fi
 echo ""
 
@@ -172,9 +213,6 @@ echo ""
 echo "Python 3.14 is now the default in the active venv."
 echo "Claude Code environment variables configured."
 echo ""
-echo "Note: Some Claude Code plugins may need to be installed manually:"
-echo "  Run: /plugin install glm-plan-usage@zai-coding-plugins"
-echo ""
 echo "MCP Servers configured via environment variables:"
 if [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
     echo "  ✓ GitHub MCP Server"
@@ -184,8 +222,81 @@ fi
 
 echo ""
 echo "------------------------------------------"
-echo "Step 6: Fixing Claude Code settings..."
+echo "Step 6: Modifying Claude Code settings..."
 echo "------------------------------------------"
+
+# Configure .vscode/settings.json for VSCode plugin
+VSCODE_SETTINGS="/workspaces/hackathon/.vscode/settings.json"
+VSCODE_DIR="/workspaces/hackathon/.vscode"
+
+if [ ! -f "$VSCODE_SETTINGS" ]; then
+    echo "  Creating .vscode/settings.json for VSCode plugin..."
+    mkdir -p "$VSCODE_DIR"
+    cat > "$VSCODE_SETTINGS" << 'EOF'
+{
+  "claudeCode.environmentVariables": [
+    {
+      "name": "ANTHROPIC_BASE_URL",
+      "value": "https://api.z.ai/api/anthropic"
+    }
+  ],
+  "claudeCode.disableLoginPrompt": true
+}
+EOF
+    echo "  ✓ .vscode/settings.json created"
+else
+    # Check if claudeCode.environmentVariables already exists
+    if ! grep -q "claudeCode.environmentVariables" "$VSCODE_SETTINGS" 2>/dev/null; then
+        echo "  Adding claudeCode.environmentVariables to existing .vscode/settings.json..."
+        if command -v jq &> /dev/null; then
+            tmp_file=$(mktemp)
+            jq '. + {
+                "claudeCode.environmentVariables": [
+                    {
+                        "name": "ANTHROPIC_BASE_URL",
+                        "value": "https://api.z.ai/api/anthropic"
+                    }
+                ],
+                "claudeCode.disableLoginPrompt": true
+            }' "$VSCODE_SETTINGS" > "$tmp_file" && mv "$tmp_file" "$VSCODE_SETTINGS"
+            echo "  ✓ claudeCode.environmentVariables added via jq"
+        else
+            # Fallback: use Python to modify the JSON
+            python3 << PYTHON_EOF
+import json
+settings_path = "$VSCODE_SETTINGS"
+try:
+    with open(settings_path, 'r') as f:
+        data = json.load(f)
+    data['claudeCode.environmentVariables'] = [
+        {
+            "name": "ANTHROPIC_BASE_URL",
+            "value": "https://api.z.ai/api/anthropic"
+        }
+    ]
+    data['claudeCode.disableLoginPrompt'] = True
+    with open(settings_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    print("  ✓ claudeCode.environmentVariables added via Python")
+except Exception as e:
+    print(f"  ⚠ Failed to update settings.json: {e}")
+PYTHON_EOF
+        fi
+    else
+        echo "  ✓ claudeCode.environmentVariables already configured in .vscode/settings.json"
+    fi
+fi
+
+# Create ~/.claude/config.json for VSCode plugin
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+    echo "  Configuring Claude Code VSCode plugin API key..."
+    mkdir -p "$HOME/.claude"
+    echo "{\"primaryApiKey\": \"$ANTHROPIC_API_KEY\"}" > "$HOME/.claude/config.json"
+    echo "  ✓ VSCode plugin config.json created with API key"
+else
+    echo "  ⚠ ANTHROPIC_API_KEY not set, skipping VSCode plugin API key configuration"
+fi
+
 # Replace ANTHROPIC_AUTH_TOKEN with ANTHROPIC_API_KEY in Claude settings
 if [ -f "$HOME/.claude/settings.json" ]; then
     if grep -q "ANTHROPIC_AUTH_TOKEN" "$HOME/.claude/settings.json"; then
@@ -194,6 +305,45 @@ if [ -f "$HOME/.claude/settings.json" ]; then
         echo "  ✓ Settings updated (backup saved as settings.json.bak)"
     else
         echo "  ✓ ANTHROPIC_API_KEY already configured in settings.json"
+    fi
+
+    # Add GLM coding plan model configuration if not already present
+    if ! grep -q "ANTHROPIC_DEFAULT_HAIKU_MODEL" "$HOME/.claude/settings.json"; then
+        echo "  Adding GLM coding plan model configuration..."
+        # Use jq to add the env variables, or fall back to Python if jq is not available
+        if command -v jq &> /dev/null; then
+            jq --arg haiku "glm-4.7-air" \
+               --arg sonnet "glm-5" \
+               --arg opus "glm-5" \
+               '.env += {
+                   "ANTHROPIC_DEFAULT_HAIKU_MODEL": $haiku,
+                   "ANTHROPIC_DEFAULT_SONNET_MODEL": $sonnet,
+                   "ANTHROPIC_DEFAULT_OPUS_MODEL": $opus
+               }' "$HOME/.claude/settings.json" > "$HOME/.claude/settings.json.tmp" && \
+               mv "$HOME/.claude/settings.json.tmp" "$HOME/.claude/settings.json"
+            echo "  ✓ GLM coding plan models configured via jq"
+        else
+            # Fallback: use Python to modify the JSON
+            python3 << 'PYTHON_EOF'
+import json
+settings_path = "$HOME/.claude/settings.json"
+try:
+    with open(settings_path, 'r') as f:
+        data = json.load(f)
+    if 'env' not in data:
+        data['env'] = {}
+    data['env']['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = 'glm-4.7-air'
+    data['env']['ANTHROPIC_DEFAULT_SONNET_MODEL'] = 'glm-5'
+    data['env']['ANTHROPIC_DEFAULT_OPUS_MODEL'] = 'glm-5'
+    with open(settings_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    print("  ✓ GLM coding plan models configured via Python")
+except Exception as e:
+    print(f"  ⚠ Failed to configure GLM models: {e}")
+PYTHON_EOF
+        fi
+    else
+        echo "  ✓ GLM coding plan models already configured"
     fi
 else
     echo "  ⚠ Claude Code settings.json not found, skipping"

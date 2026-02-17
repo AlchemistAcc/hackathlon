@@ -1,0 +1,11 @@
+{
+  "claudeCode.environmentVariables": [
+    
+    {
+      "name": "ANTHROPIC_BASE_URL",
+      "value": "https://api.z.ai/api/anthropic"
+    }
+  ],
+  "claudeCode.disableLoginPrompt": true,
+  "claudeCode.hideOnboarding": true
+}
