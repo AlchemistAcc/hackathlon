@@ -12,7 +12,6 @@
 		"ghcr.io/devcontainers-extra/features/claude-code:1": {},
 		"ghcr.io/jsburckhardt/devcontainer-features/codex:1": {},
 		"ghcr.io/kreemer/features/chrometesting:1": {},
-		"ghcr.io/devcontainers-extra/features/ruff:2": {},
 		"ghcr.io/devcontainers-extra/features/ty:1": {}
 	},
 
