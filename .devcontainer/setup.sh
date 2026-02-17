@@ -232,7 +232,25 @@ VSCODE_DIR="/workspaces/hackathon/.vscode"
 if [ ! -f "$VSCODE_SETTINGS" ]; then
     echo "  Creating .vscode/settings.json for VSCode plugin..."
     mkdir -p "$VSCODE_DIR"
-    cat > "$VSCODE_SETTINGS" << 'EOF'
+    if [ -n "$ANTHROPIC_API_KEY" ]; then
+        cat > "$VSCODE_SETTINGS" << EOF
+{
+  "claudeCode.environmentVariables": [
+    {
+      "name": "ANTHROPIC_BASE_URL",
+      "value": "https://api.z.ai/api/anthropic"
+    },
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "value": "$ANTHROPIC_API_KEY"
+    }
+  ],
+  "claudeCode.disableLoginPrompt": true,
+  "claudeCode.hideOnboarding": true
+}
+EOF
+    else
+        cat > "$VSCODE_SETTINGS" << 'EOF'
 {
   "claudeCode.environmentVariables": [
     {
@@ -243,26 +261,74 @@ if [ ! -f "$VSCODE_SETTINGS" ]; then
   "claudeCode.disableLoginPrompt": true
 }
 EOF
+    fi
     echo "  ✓ .vscode/settings.json created"
 else
     # Check if claudeCode.environmentVariables already exists
     if ! grep -q "claudeCode.environmentVariables" "$VSCODE_SETTINGS" 2>/dev/null; then
         echo "  Adding claudeCode.environmentVariables to existing .vscode/settings.json..."
-        if command -v jq &> /dev/null; then
-            tmp_file=$(mktemp)
-            jq '. + {
-                "claudeCode.environmentVariables": [
-                    {
-                        "name": "ANTHROPIC_BASE_URL",
-                        "value": "https://api.z.ai/api/anthropic"
-                    }
-                ],
-                "claudeCode.disableLoginPrompt": true
-            }' "$VSCODE_SETTINGS" > "$tmp_file" && mv "$tmp_file" "$VSCODE_SETTINGS"
-            echo "  ✓ claudeCode.environmentVariables added via jq"
+        if [ -n "$ANTHROPIC_API_KEY" ]; then
+            if command -v jq &> /dev/null; then
+                tmp_file=$(mktemp)
+                jq --arg key "$ANTHROPIC_API_KEY" '. + {
+                    "claudeCode.environmentVariables": [
+                        {
+                            "name": "ANTHROPIC_BASE_URL",
+                            "value": "https://api.z.ai/api/anthropic"
+                        },
+                        {
+                            "name": "ANTHROPIC_API_KEY",
+                            "value": $key
+                        }
+                    ],
+                    "claudeCode.disableLoginPrompt": true,
+                    "claudeCode.hideOnboarding": true
+                }' "$VSCODE_SETTINGS" > "$tmp_file" && mv "$tmp_file" "$VSCODE_SETTINGS"
+                echo "  ✓ claudeCode.environmentVariables added via jq (with API key)"
+            else
+                # Fallback: use Python to modify the JSON
+                python3 << PYTHON_EOF
+import json
+settings_path = "$VSCODE_SETTINGS"
+api_key = "$ANTHROPIC_API_KEY"
+try:
+    with open(settings_path, 'r') as f:
+        data = json.load(f)
+    data['claudeCode.environmentVariables'] = [
+        {
+            "name": "ANTHROPIC_BASE_URL",
+            "value": "https://api.z.ai/api/anthropic"
+        },
+        {
+            "name": "ANTHROPIC_API_KEY",
+            "value": api_key
+        }
+    ]
+    data['claudeCode.disableLoginPrompt'] = True
+    data['claudeCode.hideOnboarding'] = True
+    with open(settings_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    print("  ✓ claudeCode.environmentVariables added via Python (with API key)")
+except Exception as e:
+    print(f"  ⚠ Failed to update settings.json: {e}")
+PYTHON_EOF
+            fi
         else
-            # Fallback: use Python to modify the JSON
-            python3 << PYTHON_EOF
+            if command -v jq &> /dev/null; then
+                tmp_file=$(mktemp)
+                jq '. + {
+                    "claudeCode.environmentVariables": [
+                        {
+                            "name": "ANTHROPIC_BASE_URL",
+                            "value": "https://api.z.ai/api/anthropic"
+                        }
+                    ],
+                    "claudeCode.disableLoginPrompt": true
+                }' "$VSCODE_SETTINGS" > "$tmp_file" && mv "$tmp_file" "$VSCODE_SETTINGS"
+                echo "  ✓ claudeCode.environmentVariables added via jq"
+            else
+                # Fallback: use Python to modify the JSON
+                python3 << PYTHON_EOF
 import json
 settings_path = "$VSCODE_SETTINGS"
 try:
@@ -281,6 +347,7 @@ try:
 except Exception as e:
     print(f"  ⚠ Failed to update settings.json: {e}")
 PYTHON_EOF
+            fi
         fi
     else
         echo "  ✓ claudeCode.environmentVariables already configured in .vscode/settings.json"
